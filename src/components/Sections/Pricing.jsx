@@ -10,7 +10,7 @@ const perImagePlans = [
     id: 'standard',
     name: 'الأساسية',
     nameEn: 'Standard',
-    price: 10,
+    price: 20,
     features: [
       { text: 'صورة مصغرة واحدة', included: true },
       { text: 'تعديلان على التصميم', included: true },
@@ -26,7 +26,7 @@ const perImagePlans = [
     id: 'professional',
     name: 'الاحترافية',
     nameEn: 'Professional',
-    price: 15,
+    price: 28,
     popular: true,
     features: [
       { text: 'صورة مصغرة واحدة', included: true },
@@ -43,7 +43,7 @@ const perImagePlans = [
     id: 'ultimate',
     name: 'الذهبية',
     nameEn: 'Ultimate',
-    price: 25,
+    price: 40,
     features: [
       { text: 'صورة مصغرة واحدة', included: true },
       { text: 'تعديلات غير محدودة', included: true },
@@ -63,8 +63,8 @@ const monthlyPlans = [
     name: 'المبتدئ',
     nameEn: 'Starter',
     thumbnails: 5,
-    price: 40,
-    perImage: 8,
+    price: 90,
+    perImage: 18,
     saving: 10,
     features: [
       { text: '5 صور مصغرة شهرياً', included: true },
@@ -82,8 +82,8 @@ const monthlyPlans = [
     name: 'النمو',
     nameEn: 'Growth',
     thumbnails: 10,
-    price: 70,
-    perImage: 7,
+    price: 170,
+    perImage: 17,
     saving: 30,
     popular: true,
     features: [
@@ -102,8 +102,8 @@ const monthlyPlans = [
     name: 'الانطلاق',
     nameEn: 'Scale',
     thumbnails: 20,
-    price: 120,
-    perImage: 6,
+    price: 320,
+    perImage: 16,
     saving: 80,
     features: [
       { text: '20 صورة مصغرة شهرياً', included: true },
