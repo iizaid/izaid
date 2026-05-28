@@ -20,14 +20,11 @@ export default function Showcase() {
   const subRef = useRef(null)
   const galleryRef = useRef(null)
   const [items, setItems] = useState([])
-  const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
 
-  const fetchShowcase = async (pageNum) => {
+  const fetchShowcase = async () => {
     try {
-      const res = await fetch(apiUrl(`/api/showcase?page=${pageNum}&limit=18`))
+      const res = await fetch(apiUrl('/api/showcase?page=1&limit=24'))
       if (!res.ok) throw new Error('Failed')
       const data = await res.json()
       const normalized = data.items.map((item) => ({
@@ -35,20 +32,17 @@ export default function Showcase() {
         alt: item.altText || 'Portfolio thumbnail',
       }))
 
-      setItems((prev) => (pageNum === 1 ? normalized : [...prev, ...normalized]))
-      setHasMore(data.hasMore)
-      setPage(data.page)
+      setItems(normalized)
     } catch (error) {
       console.error('Failed to load showcase', error)
-      if (pageNum === 1) setItems(localThumbnails)
+      setItems(localThumbnails)
     } finally {
       setIsLoading(false)
-      setIsLoadingMore(false)
     }
   }
 
   useEffect(() => {
-    fetchShowcase(1)
+    fetchShowcase()
   }, [])
 
   useEffect(() => {
@@ -104,67 +98,49 @@ export default function Showcase() {
 
   const galleryImages = useMemo(() => items.filter((item) => item.src), [items])
 
-  const loadMore = () => {
-    if (!hasMore || isLoadingMore) return
-    setIsLoadingMore(true)
-    fetchShowcase(page + 1)
-  }
-
   return (
-    <section id="work" ref={containerRef} className="relative overflow-hidden border-t border-slate-200 bg-[#09090f] py-20 md:py-28">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.12),transparent_30%),radial-gradient(circle_at_bottom,rgba(168,85,247,0.12),transparent_24%)]" />
+    <section id="work" ref={containerRef} className="relative overflow-hidden border-t border-slate-200 bg-gray-50 py-20 md:py-28">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.08),transparent_28%),radial-gradient(circle_at_bottom,rgba(14,165,233,0.05),transparent_24%)]" />
 
-      <div className="container relative z-10 mx-auto px-6">
-        <div className="mb-14 max-w-3xl text-right mr-auto">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-bold text-slate-300 backdrop-blur">
+      <div className="relative z-10 w-full">
+        <div className="mx-auto mb-12 max-w-4xl px-6 text-center">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold text-slate-600 shadow-sm">
             معرض الأعمال
           </div>
-          <h2 ref={headingRef} className="mb-6 text-3xl font-black text-white sm:text-4xl md:text-6xl">
-            عرض أعمال <span className="text-primary-400">بصيغة بريميوم</span>
+          <h2 ref={headingRef} className="mb-5 text-3xl font-black text-slate-950 sm:text-4xl md:text-6xl">
+            أعمال مختارة <span className="text-primary-500">بطريقة أذكى</span>
           </h2>
-          <p ref={subRef} className="text-base text-slate-400 sm:text-lg">
-            نفس أعمالك الحالية، لكن بطريقة عرض سينمائية تبرز الصور وتسمح بالتفاعل معها بشكل احترافي من دون ازدحام الشبكة التقليدية.
+          <p ref={subRef} className="mx-auto max-w-2xl text-base text-slate-600 sm:text-lg">
+            اسحب المعرض أو افتح أي صورة لتشاهدها بالكامل بقياس اليوتيوب.
           </p>
         </div>
 
         {isLoading ? (
-          <div className="h-[560px] rounded-[32px] border border-white/10 bg-white/5 animate-pulse" />
+          <div className="mx-6 h-[620px] rounded-[32px] border border-slate-200 bg-white animate-pulse shadow-sm sm:h-[720px] lg:h-[860px]" />
         ) : (
-          <>
-            <div
-              ref={galleryRef}
-              className="relative overflow-hidden rounded-[36px] border border-white/10 bg-[#120f17] shadow-[0_40px_120px_-60px_rgba(14,165,233,0.35)]"
-            >
-              <div className="h-[620px] w-full sm:h-[700px] lg:h-[820px]">
-                <DomeGallery
-                  images={galleryImages}
-                  fit={0.8}
-                  minRadius={560}
-                  segments={34}
-                  dragDampening={2}
-                  maxVerticalRotationDeg={0}
-                  openedImageWidth="min(72vw, 820px)"
-                  openedImageHeight="min(72vh, 820px)"
-                  imageBorderRadius="26px"
-                  openedImageBorderRadius="30px"
-                  grayscale={false}
-                  overlayBlurColor="#120f17"
-                />
-              </div>
+          <div
+            ref={galleryRef}
+            className="mx-3 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_28px_70px_-48px_rgba(15,23,42,0.18)] sm:mx-4 md:mx-6"
+          >
+            <div className="h-[640px] w-full sm:h-[760px] lg:h-[920px] xl:h-[1020px]">
+              <DomeGallery
+                images={galleryImages}
+                fit={0.84}
+                minRadius={560}
+                segments={34}
+                dragDampening={2}
+                maxVerticalRotationDeg={0}
+                openedImageWidth="min(88vw, 1120px)"
+                openedImageHeight="min(49.5vw, 630px)"
+                openedImageAspectRatio="16 / 9"
+                openedImageObjectFit="contain"
+                imageBorderRadius="26px"
+                openedImageBorderRadius="28px"
+                grayscale={false}
+                overlayBlurColor="#f9fafb"
+              />
             </div>
-
-            {hasMore && (
-              <div className="mt-10 text-center">
-                <button
-                  onClick={loadMore}
-                  disabled={isLoadingMore}
-                  className="rounded-full border border-white/10 bg-white/5 px-8 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-50"
-                >
-                  {isLoadingMore ? 'جاري تحميل المزيد...' : 'تحميل المزيد من الأعمال'}
-                </button>
-              </div>
-            )}
-          </>
+          </div>
         )}
       </div>
     </section>

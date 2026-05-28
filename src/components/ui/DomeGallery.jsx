@@ -89,6 +89,8 @@ export default function DomeGallery({
   dragDampening = 2,
   openedImageWidth = '520px',
   openedImageHeight = '520px',
+  openedImageAspectRatio = '16 / 9',
+  openedImageObjectFit = 'contain',
   imageBorderRadius = '28px',
   openedImageBorderRadius = '28px',
   grayscale = false,
@@ -303,15 +305,17 @@ export default function DomeGallery({
     overlay.style.transition = `transform ${enlargeTransitionMs}ms ease, opacity ${enlargeTransitionMs}ms ease`
     overlay.style.borderRadius = openedImageBorderRadius
     overlay.style.overflow = 'hidden'
-    overlay.style.boxShadow = '0 10px 30px rgba(0,0,0,.35)'
+    overlay.style.boxShadow = '0 24px 60px rgba(15,23,42,.16)'
+    overlay.style.background = '#ffffff'
 
     const img = document.createElement('img')
     img.src = parent.dataset.src || element.querySelector('img')?.src || ''
     img.alt = parent.dataset.alt || element.querySelector('img')?.alt || ''
     img.style.width = '100%'
     img.style.height = '100%'
-    img.style.objectFit = 'cover'
+    img.style.objectFit = openedImageObjectFit
     img.style.filter = grayscale ? 'grayscale(1)' : 'none'
+    img.style.background = '#ffffff'
     overlay.appendChild(img)
     viewerRef.current?.appendChild(overlay)
 
@@ -345,6 +349,7 @@ export default function DomeGallery({
     lockScroll,
     openedImageBorderRadius,
     openedImageHeight,
+    openedImageObjectFit,
     openedImageWidth,
     segments,
     unlockScroll,
@@ -456,15 +461,16 @@ export default function DomeGallery({
         z-index: 9999;
         border-radius: ${openedImageBorderRadius};
         overflow: hidden;
-        box-shadow: 0 10px 30px rgba(0,0,0,.35);
+        box-shadow: 0 24px 60px rgba(15,23,42,.16);
         transition: all ${enlargeTransitionMs}ms ease-out;
         pointer-events: none;
         filter: ${grayscale ? 'grayscale(1)' : 'none'};
+        background: #ffffff;
       `
 
       const img = overlay.querySelector('img')?.cloneNode()
       if (img) {
-        img.style.cssText = 'width:100%;height:100%;object-fit:cover;'
+        img.style.cssText = `width:100%;height:100%;object-fit:${openedImageObjectFit};background:#ffffff;`
         animatingOverlay.appendChild(img)
       }
 
@@ -505,7 +511,7 @@ export default function DomeGallery({
       scrim.removeEventListener('click', close)
       window.removeEventListener('keydown', onKey)
     }
-  }, [enlargeTransitionMs, grayscale, openedImageBorderRadius, unlockScroll])
+  }, [enlargeTransitionMs, grayscale, openedImageBorderRadius, openedImageObjectFit, unlockScroll])
 
   useEffect(() => () => document.body.classList.remove('dg-scroll-lock'), [])
 
@@ -547,7 +553,7 @@ export default function DomeGallery({
                 }}
               >
                 <div
-                  className="item__image absolute block cursor-pointer overflow-hidden bg-slate-900"
+                  className="item__image absolute block cursor-pointer overflow-hidden bg-white"
                   role="button"
                   tabIndex={0}
                   aria-label={item.alt || 'Open image'}
@@ -609,12 +615,15 @@ export default function DomeGallery({
           <div
             ref={scrimRef}
             className="scrim absolute inset-0 z-10 pointer-events-none opacity-0 transition-opacity duration-500"
-            style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(3px)' }}
-          />
+              style={{ background: 'rgba(249,250,251,0.58)', backdropFilter: 'blur(5px)' }}
+            />
           <div
             ref={frameRef}
-            className="viewer-frame flex h-full aspect-square"
-            style={{ borderRadius: `var(--enlarge-radius, ${openedImageBorderRadius})` }}
+            className="viewer-frame flex h-full"
+            style={{
+              borderRadius: `var(--enlarge-radius, ${openedImageBorderRadius})`,
+              aspectRatio: openedImageAspectRatio,
+            }}
           />
         </div>
       </main>
