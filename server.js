@@ -790,7 +790,8 @@ app.get('/api/portfolio', async (req, res) => {
 // ==========================================
 
 function getPublicBaseUrl(req) {
-  return `${req.protocol}://${req.get('host')}`
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol
+  return `${protocol}://${req.get('host')}`
 }
 
 function toShowcaseMeta(item, req) {
