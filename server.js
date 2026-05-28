@@ -110,7 +110,41 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true })
 }
 
+const thumbnailsDir = path.join(__dirname, 'public', 'thumbnails')
+
 app.use('/uploads', express.static(uploadDir, { maxAge: '30d' }))
+app.use('/thumbnails', express.static(thumbnailsDir, { maxAge: '30d' }))
+
+const resolveLegacyThumbnailPath = (requestedFilename) => {
+  const safeFilename = path.basename(requestedFilename || '')
+  if (!safeFilename) return null
+
+  const exactPath = path.join(thumbnailsDir, safeFilename)
+  if (fs.existsSync(exactPath)) return exactPath
+
+  const { name } = path.parse(safeFilename)
+  if (!name) return null
+
+  const candidateExtensions = ['.webp', '.png', '.jpg', '.jpeg']
+  for (const extension of candidateExtensions) {
+    const candidatePath = path.join(thumbnailsDir, `${name}${extension}`)
+    if (fs.existsSync(candidatePath)) {
+      return candidatePath
+    }
+  }
+
+  return null
+}
+
+app.get('/thumbnails/:filename', (req, res) => {
+  const resolvedPath = resolveLegacyThumbnailPath(req.params.filename)
+  if (!resolvedPath) {
+    return res.status(404).send('Thumbnail not found')
+  }
+
+  res.set('Cache-Control', 'public, max-age=2592000, immutable')
+  return res.sendFile(resolvedPath)
+})
 
 // Avatar upload: use memoryStorage so we can convert to base64 for persistent DB storage
 // (Render free-tier has ephemeral disk — files are lost on redeploy)
@@ -788,11 +822,6 @@ app.get('/api/portfolio', async (req, res) => {
 // ==========================================
 // NEW SHOWCASE API (Public & Admin)
 // ==========================================
-
-function getPublicBaseUrl(req) {
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol
-  return `${protocol}://${req.get('host')}`
-}
 
 function toShowcaseMeta(item, req) {
   const protocol = req.headers['x-forwarded-proto'] || req.protocol
