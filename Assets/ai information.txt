@@ -1,0 +1,2 @@
+api key = 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
+model = nvidia/nemotron-3-super-120b-a12b:free

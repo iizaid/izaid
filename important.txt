@@ -1,0 +1,2 @@
+JWT_SECRET = izaid_super_secret_master_key_2026_xyz
+DATABASE_URL = postgresql://neondb_owner:npg_a8A5lFMozRyT@ep-morning-queen-algajij9.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require

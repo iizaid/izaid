@@ -1,0 +1,4 @@
+postgrees database 
+database password = wordflow2026
+admin email = zaid.tarawneg.505@gmail.com
+admin password = :75ATJOJO123456789Aa@#$
