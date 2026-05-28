@@ -123,18 +123,18 @@ export default function Showcase() {
             className="mx-3 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_28px_70px_-48px_rgba(15,23,42,0.18)] sm:mx-4 md:mx-6"
           >
             <div className="h-[640px] w-full sm:h-[760px] lg:h-[920px] xl:h-[1020px]">
-              <DomeGallery
-                images={galleryImages}
-                fit={0.84}
-                minRadius={560}
-                segments={34}
-                dragDampening={2}
-                maxVerticalRotationDeg={0}
-                openedImageWidth="min(88vw, 1120px)"
-                openedImageHeight="min(49.5vw, 630px)"
-                openedImageAspectRatio="16 / 9"
-                openedImageObjectFit="contain"
-                imageBorderRadius="26px"
+                <DomeGallery
+                  images={galleryImages}
+                  fit={0.84}
+                  minRadius={560}
+                  segments={34}
+                  dragDampening={2}
+                  maxVerticalRotationDeg={0}
+                  openedImageWidth="min(92vw, 1280px)"
+                  openedImageHeight="min(51.75vw, 720px)"
+                  openedImageAspectRatio="16 / 9"
+                  openedImageObjectFit="contain"
+                  imageBorderRadius="26px"
                 openedImageBorderRadius="28px"
                 grayscale={false}
                 overlayBlurColor="#f9fafb"
