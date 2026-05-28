@@ -273,15 +273,11 @@ export default function Showcase() {
           <>
             <div ref={gridRef} className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 md:gap-8">
               {items.map((img, index) => {
-                const isFeatured = index === 0
-
                 return (
                   <div
                     key={img.id || index}
                     onClick={() => setSelectedImage(img)}
-                    className={`gsap-thumb group relative aspect-video cursor-pointer overflow-hidden rounded-xl bg-slate-900 will-change-transform opacity-100 sm:opacity-0 ${
-                      isFeatured ? 'lg:col-span-2' : ''
-                    }`}
+                    className="gsap-thumb group relative aspect-video cursor-pointer overflow-hidden rounded-xl bg-slate-900 will-change-transform opacity-100 sm:opacity-0"
                   >
                     <img
                       src={img.url}
