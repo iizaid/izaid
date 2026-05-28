@@ -96,8 +96,6 @@ export default function Showcase() {
       }
     }, containerRef)
 
-    }, containerRef)
-
     return () => ctx.revert()
   }, [thumbnails.length])
 
