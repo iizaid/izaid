@@ -795,10 +795,17 @@ function getPublicBaseUrl(req) {
 }
 
 function toShowcaseMeta(item, req) {
-  const baseUrl = getPublicBaseUrl(req)
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol
+  const baseUrl = `${protocol}://${req.get('host')}`
+  
+  let finalImageUrl = `${baseUrl}/api/showcase/images/${item.id}?v=${new Date(item.updatedAt).getTime()}`
+  if (item.image && item.image.startsWith('/')) {
+    finalImageUrl = `${baseUrl}${item.image}`
+  }
+
   return {
     id: item.id,
-    imageUrl: `${baseUrl}/api/showcase/images/${item.id}?v=${new Date(item.updatedAt).getTime()}`,
+    imageUrl: finalImageUrl,
     altText: item.altText,
     order: item.order,
     isPublished: item.isPublished,
@@ -817,11 +824,11 @@ app.get('/api/showcase', async (req, res) => {
 
     const [items, total] = await Promise.all([
       prisma.showcaseImage.findMany({
+        take: limit,
+        skip: skip,
         where: { isPublished: true },
-        select: { id: true, altText: true, order: true, isPublished: true, originalName: true, createdAt: true, updatedAt: true },
+        select: { id: true, image: true, altText: true, order: true, isPublished: true, originalName: true, createdAt: true, updatedAt: true },
         orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
-        skip,
-        take: limit
       }),
       prisma.showcaseImage.count({ where: { isPublished: true } })
     ])
@@ -872,7 +879,7 @@ app.get('/api/showcase/images/:id', async (req, res) => {
 app.get('/api/admin/showcase', isAdmin, async (req, res) => {
   try {
     const items = await prisma.showcaseImage.findMany({
-      select: { id: true, altText: true, order: true, isPublished: true, originalName: true, createdAt: true, updatedAt: true },
+      select: { id: true, image: true, altText: true, order: true, isPublished: true, originalName: true, createdAt: true, updatedAt: true },
       orderBy: [{ order: 'asc' }, { createdAt: 'desc' }]
     })
     res.json(items.map(item => toShowcaseMeta(item, req)))
