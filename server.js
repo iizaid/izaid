@@ -843,14 +843,19 @@ app.get('/api/showcase/images/:id', async (req, res) => {
   try {
     const image = await prisma.showcaseImage.findUnique({
       where: { id: req.params.id },
-      select: { imageBase64: true, mimeType: true, isPublished: true }
+      select: { imageBase64: true, image: true, mimeType: true, isPublished: true }
     })
 
     if (!image || !image.isPublished) {
       return res.status(404).send('Image not found')
     }
 
-    const base64Data = image.imageBase64.replace(/^data:image\/\w+;base64,/, '')
+    const rawData = image.imageBase64 || image.image
+    if (!rawData) {
+      return res.status(404).send('Image data empty')
+    }
+
+    const base64Data = rawData.replace(/^data:image\/\w+;base64,/, '')
     const buffer = Buffer.from(base64Data, 'base64')
 
     res.set('Content-Type', image.mimeType || 'image/webp')
