@@ -5,12 +5,14 @@ import {
   BarChart3, Users, Plus,
   LayoutDashboard, Clock, Play, Square,
   CheckCircle2, LogOut,
-  UserPlus, Search, Trash2, Edit3, Mail, Phone, ArrowRight
+  UserPlus, Search, Trash2, Edit3, Mail, Phone, ArrowRight,
+  Image as ImageIcon
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../context/AuthContext'
 import { apiUrl } from '../../lib/api'
+import AdminShowcase from './AdminShowcase'
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard') // dashboard, clients, leads, analytics
@@ -339,6 +341,9 @@ export default function AdminDashboard() {
               <span className="mr-auto bg-blue-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">{leads.filter(l => l.status === 'NEW').length}</span>
             )}
           </button>
+          <button onClick={() => setActiveTab('showcase')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'showcase' ? 'bg-primary-50 text-primary-600' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}>
+            <ImageIcon className="w-5 h-5" />معرض الأعمال
+          </button>
           <button onClick={() => setActiveTab('analytics')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'analytics' ? 'bg-primary-50 text-primary-600' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}>
             <BarChart3 className="w-5 h-5" />التحليلات
           </button>
@@ -375,6 +380,7 @@ export default function AdminDashboard() {
               <UserPlus className="w-5 h-5" />
               {leads.filter(l => l.status === 'NEW').length > 0 && <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">{leads.filter(l => l.status === 'NEW').length}</span>}
             </button>
+            <button className="lg:hidden w-10 h-10 bg-gray-900 border border-gray-800 rounded-full flex items-center justify-center text-white shrink-0" onClick={() => setActiveTab('showcase')}><ImageIcon className="w-5 h-5" /></button>
           </div>
         </header>
 
@@ -867,6 +873,11 @@ export default function AdminDashboard() {
               <button onClick={() => setActiveTab('dashboard')} className="px-6 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors">العودة للرئيسية</button>
             </div>
           </motion.div>
+        )}
+
+        {/* Showcase Tab */}
+        {activeTab === 'showcase' && (
+          <AdminShowcase token={token} showToast={showToast} />
         )}
 
         

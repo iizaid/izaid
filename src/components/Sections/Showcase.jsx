@@ -27,21 +27,39 @@ export default function Showcase() {
   const [colors, setColors] = useState([])
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [copiedColor, setCopiedColor] = useState(null)
-  const [thumbnails, setThumbnails] = useState([])
+  const [items, setItems] = useState([])
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+
+  const fetchShowcase = async (pageNum) => {
+    try {
+      const res = await fetch(apiUrl(`/api/showcase?page=${pageNum}&limit=12`))
+      if (!res.ok) throw new Error('Failed')
+      const data = await res.json()
+      
+      setItems(prev => pageNum === 1 ? data.items : [...prev, ...data.items])
+      setHasMore(data.hasMore)
+      setPage(data.page)
+    } catch (err) {
+      console.error('Failed to load portfolio', err)
+      if (pageNum === 1) setItems(localThumbnails) // Fallback
+    } finally {
+      setIsLoading(false)
+      setIsLoadingMore(false)
+    }
+  }
 
   useEffect(() => {
-    // Load local first, then fetch backend
-    setThumbnails(localThumbnails)
-    fetch(apiUrl('/api/portfolio'))
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.length > 0) {
-          const dbThumbnails = data.map(d => ({ url: d.imageUrl, title: d.title }))
-          setThumbnails([...dbThumbnails, ...localThumbnails])
-        }
-      })
-      .catch(err => console.error('Failed to load portfolio', err))
+    fetchShowcase(1)
   }, [])
+
+  const loadMore = () => {
+    if (!hasMore || isLoadingMore) return
+    setIsLoadingMore(true)
+    fetchShowcase(page + 1)
+  }
 
   // GSAP ScrollTrigger animations
   useEffect(() => {
@@ -97,7 +115,7 @@ export default function Showcase() {
     }, containerRef)
 
     return () => ctx.revert()
-  }, [thumbnails.length])
+  }, [items.length, isLoading])
 
   useEffect(() => {
     if (selectedImage) {
@@ -257,35 +275,56 @@ export default function Showcase() {
           </p>
         </div>
 
-        <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
-          {thumbnails.map((img, idx) => {
-            const isFeatured = idx === 0 || idx === 7 || idx === 12
-            
-            return (
-              <div
-                key={idx}
-                onClick={() => setSelectedImage(img)}
-                className={`gsap-thumb aspect-video relative group rounded-xl overflow-hidden bg-slate-900 cursor-pointer will-change-transform ${isFeatured ? 'sm:col-span-2 sm:row-span-2 sm:aspect-auto' : ''}`}
-                style={{ opacity: 0 }}
-              >
-                <img 
-                  src={img.url} 
-                  alt={img.title || `Zaid Thumbnail Work ${idx + 1}`}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-contain transition-transform duration-700 ease-in-out group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="aspect-video bg-gray-200 animate-pulse rounded-xl"></div>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+              {items.map((img, idx) => {
+                const isFeatured = idx === 0 || idx === 7 || idx === 12
                 
-                <div className="absolute bottom-0 right-0 p-6 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 ease-out flex justify-between items-end w-full">
-                  <div className="w-10 h-10 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-lg transform -translate-x-4">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                return (
+                  <div
+                    key={img.id || idx}
+                    onClick={() => setSelectedImage(img)}
+                    className={`gsap-thumb aspect-video relative group rounded-xl overflow-hidden bg-slate-900 cursor-pointer will-change-transform opacity-100 sm:opacity-0 ${isFeatured ? 'sm:col-span-2 sm:row-span-2 sm:aspect-auto' : ''}`}
+                  >
+                    <img 
+                      src={img.url} 
+                      alt={img.title || img.altText || `Zaid Thumbnail Work ${idx + 1}`}
+                      loading={idx < 4 ? "eager" : "lazy"}
+                      decoding="async"
+                      className="w-full h-full object-contain transition-transform duration-700 ease-in-out group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    
+                    <div className="absolute bottom-0 right-0 p-6 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 ease-out flex justify-between items-end w-full">
+                      <div className="w-10 h-10 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-lg transform -translate-x-4">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )
+              })}
+            </div>
+            
+            {hasMore && (
+              <div className="mt-12 text-center">
+                <button
+                  onClick={loadMore}
+                  disabled={isLoadingMore}
+                  className="px-8 py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition-all shadow-lg disabled:opacity-50"
+                >
+                  {isLoadingMore ? 'جاري التحميل...' : 'عرض المزيد'}
+                </button>
               </div>
-            )
-          })}
-        </div>
+            )}
+          </>
+        )}
 
       </div>
 
