@@ -11,6 +11,7 @@ import fs from 'fs'
 import helmet from 'helmet'
 import compression from 'compression'
 import rateLimit from 'express-rate-limit'
+import sharp from 'sharp'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -122,6 +123,17 @@ const avatarUpload = multer({
     const mimetype = filetypes.test(file.mimetype)
     if (mimetype && extname) return cb(null, true)
     cb(new Error('يُسمح برفع الصور فقط وبحجم لا يتجاوز 5 ميجابايت (jpg, png, webp)'))
+  }
+})
+
+// Showcase upload config
+const showcaseUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (allowedTypes.includes(file.mimetype)) cb(null, true)
+    else cb(new Error('Only JPG, PNG and WebP images are allowed'))
   }
 })
 
@@ -759,7 +771,7 @@ app.post('/api/admin/client/:id/deliverables', isAdmin, async (req, res) => {
   }
 })
 
-// Public Portfolio API
+// Public Portfolio API (Replaced with Showcase API below, but keeping old deliverables API if needed)
 app.get('/api/portfolio', async (req, res) => {
   try {
     const deliverables = await prisma.deliverable.findMany({
@@ -770,6 +782,218 @@ app.get('/api/portfolio', async (req, res) => {
   } catch (error) {
     console.error('Portfolio Error:', error)
     res.status(500).json({ error: 'خطأ في تحميل المعرض' })
+  }
+})
+
+// ==========================================
+// NEW SHOWCASE API (Public & Admin)
+// ==========================================
+
+function getPublicBaseUrl(req) {
+  return `${req.protocol}://${req.get('host')}`
+}
+
+function toShowcaseMeta(item, req) {
+  const baseUrl = getPublicBaseUrl(req)
+  return {
+    id: item.id,
+    imageUrl: `${baseUrl}/api/showcase/images/${item.id}?v=${new Date(item.updatedAt).getTime()}`,
+    altText: item.altText,
+    order: item.order,
+    isPublished: item.isPublished,
+    originalName: item.originalName,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt
+  }
+}
+
+// 1. PUBLIC SHOWCASE ROUTES
+app.get('/api/showcase', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1)
+    const limit = Math.min(24, Math.max(1, parseInt(req.query.limit) || 12))
+    const skip = (page - 1) * limit
+
+    const [items, total] = await Promise.all([
+      prisma.showcaseImage.findMany({
+        where: { isPublished: true },
+        select: { id: true, altText: true, order: true, isPublished: true, originalName: true, createdAt: true, updatedAt: true },
+        orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+        skip,
+        take: limit
+      }),
+      prisma.showcaseImage.count({ where: { isPublished: true } })
+    ])
+
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300')
+    res.json({
+      items: items.map(item => toShowcaseMeta(item, req)),
+      page,
+      limit,
+      total,
+      hasMore: skip + items.length < total
+    })
+  } catch (error) {
+    console.error('Showcase fetch error:', error)
+    res.status(500).json({ error: 'خطأ في جلب بيانات المعرض' })
+  }
+})
+
+app.get('/api/showcase/images/:id', async (req, res) => {
+  try {
+    const image = await prisma.showcaseImage.findUnique({
+      where: { id: req.params.id },
+      select: { imageBase64: true, mimeType: true, isPublished: true }
+    })
+
+    if (!image || !image.isPublished) {
+      return res.status(404).send('Image not found')
+    }
+
+    const base64Data = image.imageBase64.replace(/^data:image\/\w+;base64,/, '')
+    const buffer = Buffer.from(base64Data, 'base64')
+
+    res.set('Content-Type', image.mimeType || 'image/webp')
+    res.set('Cache-Control', 'public, max-age=31536000, immutable')
+    res.send(buffer)
+  } catch (error) {
+    console.error('Image serve error:', error)
+    res.status(500).send('Internal Error')
+  }
+})
+
+// 2. ADMIN SHOWCASE ROUTES
+app.get('/api/admin/showcase', isAdmin, async (req, res) => {
+  try {
+    const items = await prisma.showcaseImage.findMany({
+      select: { id: true, altText: true, order: true, isPublished: true, originalName: true, createdAt: true, updatedAt: true },
+      orderBy: [{ order: 'asc' }, { createdAt: 'desc' }]
+    })
+    res.json(items.map(item => toShowcaseMeta(item, req)))
+  } catch (error) {
+    console.error('Admin showcase fetch error:', error)
+    res.status(500).json({ error: 'خطأ في جلب بيانات المعرض' })
+  }
+})
+
+app.post('/api/admin/showcase', isAdmin, showcaseUpload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'لم يتم إرفاق أي صورة' })
+    }
+
+    const buffer = await sharp(req.file.buffer)
+      .rotate()
+      .resize(1280, null, { withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer()
+
+    const base64 = `data:image/webp;base64,${buffer.toString('base64')}`
+    
+    let originalName = req.file.originalname
+    if (originalName && originalName.length > 200) {
+      originalName = originalName.substring(0, 200)
+    }
+
+    let altText = req.body.altText
+    if (altText && altText.length > 200) {
+      altText = altText.substring(0, 200)
+    }
+
+    const newItem = await prisma.$transaction(async (tx) => {
+      // Increment order of all existing images
+      await tx.showcaseImage.updateMany({
+        data: { order: { increment: 1 } }
+      })
+
+      // Create new image with order 0
+      return await tx.showcaseImage.create({
+        data: {
+          imageBase64: base64,
+          mimeType: 'image/webp',
+          originalName: originalName || null,
+          altText: altText || null,
+          order: 0,
+          isPublished: true
+        }
+      })
+    })
+
+    res.json(toShowcaseMeta(newItem, req))
+  } catch (error) {
+    console.error('Showcase upload error:', error)
+    res.status(500).json({ error: 'خطأ أثناء رفع الصورة' })
+  }
+})
+
+app.patch('/api/admin/showcase/:id', isAdmin, async (req, res) => {
+  try {
+    const { altText, isPublished } = req.body
+    
+    const updateData = {}
+    if (altText !== undefined) updateData.altText = altText ? altText.substring(0, 200) : null
+    if (isPublished !== undefined) updateData.isPublished = Boolean(isPublished)
+
+    const updated = await prisma.showcaseImage.update({
+      where: { id: req.params.id },
+      data: updateData
+    })
+
+    res.json(toShowcaseMeta(updated, req))
+  } catch (error) {
+    console.error('Showcase update error:', error)
+    res.status(500).json({ error: 'خطأ أثناء تحديث بيانات الصورة' })
+  }
+})
+
+app.put('/api/admin/showcase/reorder', isAdmin, async (req, res) => {
+  try {
+    const { orderedIds } = req.body
+    if (!Array.isArray(orderedIds)) {
+      return res.status(400).json({ error: 'البيانات غير صالحة' })
+    }
+
+    await prisma.$transaction(
+      orderedIds.map((id, index) => 
+        prisma.showcaseImage.update({
+          where: { id },
+          data: { order: index }
+        })
+      )
+    )
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Showcase reorder error:', error)
+    res.status(500).json({ error: 'خطأ أثناء إعادة الترتيب' })
+  }
+})
+
+app.delete('/api/admin/showcase/:id', isAdmin, async (req, res) => {
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.showcaseImage.delete({
+        where: { id: req.params.id }
+      })
+
+      // Re-normalize orders
+      const remaining = await tx.showcaseImage.findMany({
+        orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+        select: { id: true }
+      })
+
+      for (let i = 0; i < remaining.length; i++) {
+        await tx.showcaseImage.update({
+          where: { id: remaining[i].id },
+          data: { order: i }
+        })
+      }
+    })
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Showcase delete error:', error)
+    res.status(500).json({ error: 'خطأ أثناء حذف الصورة' })
   }
 })
 

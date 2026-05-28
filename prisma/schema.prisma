@@ -118,3 +118,16 @@ enum LeadStatus {
   NOT_INTERESTED
   CONVERTED
 }
+
+model ShowcaseImage {
+  id           String   @id @default(uuid())
+  image        String?  @db.Text
+  imageBase64  String   @default("") @db.Text
+  mimeType     String   @default("image/webp")
+  originalName String?
+  altText      String?
+  order        Int      @default(0)
+  isPublished  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
