@@ -39,12 +39,18 @@ export default function Showcase() {
       if (!res.ok) throw new Error('Failed')
       const data = await res.json()
       
-      setItems(prev => pageNum === 1 ? data.items : [...prev, ...data.items])
+      // Normalize: API items use `imageUrl`, lightbox and extractor expect `url`
+      const normalized = data.items.map(item => ({
+        ...item,
+        url: item.imageUrl || item.url || ''
+      }))
+      
+      setItems(prev => pageNum === 1 ? normalized : [...prev, ...normalized])
       setHasMore(data.hasMore)
       setPage(data.page)
     } catch (err) {
       console.error('Failed to load portfolio', err)
-      if (pageNum === 1) setItems(localThumbnails) // Fallback
+      if (pageNum === 1) setItems(localThumbnails) // Fallback to local
     } finally {
       setIsLoading(false)
       setIsLoadingMore(false)
@@ -63,6 +69,8 @@ export default function Showcase() {
 
   // GSAP ScrollTrigger animations
   useEffect(() => {
+    if (isLoading) return // Don't animate while loading skeletons
+
     const ctx = gsap.context(() => {
       // Heading slide-up reveal
       if (headingRef.current) {
@@ -97,8 +105,8 @@ export default function Showcase() {
 
       // Grid items staggered reveal
       if (gridRef.current) {
-        const items = gridRef.current.querySelectorAll('.gsap-thumb')
-        gsap.fromTo(items,
+        const gridItems = gridRef.current.querySelectorAll('.gsap-thumb')
+        gsap.fromTo(gridItems,
           { y: 60, opacity: 0, scale: 0.95 },
           {
             y: 0, opacity: 1, scale: 1,
@@ -114,7 +122,21 @@ export default function Showcase() {
       }
     }, containerRef)
 
-    return () => ctx.revert()
+    // Safety fallback: if GSAP/ScrollTrigger never fires, make everything visible after 2s
+    const safetyTimer = setTimeout(() => {
+      if (headingRef.current) headingRef.current.style.opacity = '1'
+      if (subRef.current) subRef.current.style.opacity = '1'
+      if (gridRef.current) {
+        gridRef.current.querySelectorAll('.gsap-thumb').forEach(el => {
+          el.style.opacity = '1'
+        })
+      }
+    }, 2000)
+
+    return () => {
+      ctx.revert()
+      clearTimeout(safetyTimer)
+    }
   }, [items.length, isLoading])
 
   useEffect(() => {
@@ -262,14 +284,12 @@ export default function Showcase() {
           <h2 
             ref={headingRef}
             className="text-3xl sm:text-4xl md:text-6xl font-black mb-8 text-gray-900"
-            style={{ opacity: 0 }}
           >
             معرض <span className="text-primary-600">أعمالي</span>
           </h2>
           <p 
             ref={subRef}
             className="text-gray-500 text-base sm:text-lg"
-            style={{ opacity: 0 }}
           >
             مجموعة مختارة من أفضل الصور المصغرة التي قمت بتصميمها، متصدرة النتائج وجاذبة للعين من اللحظة الأولى.
           </p>
